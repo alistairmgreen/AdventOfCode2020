@@ -2,19 +2,13 @@ use itertools::Itertools;
 use std::collections::HashMap;
 
 fn main() {
-    let passports: Vec<_> = include_str!("example.txt")
+    let valid_passports = include_str!("puzzle_input.txt")
         .lines()
         .batching(|batch| read_passport(batch))
-        .collect();
-    for passport in &passports {
-        println!("{:?}", passport);
-        if is_valid(&passport) {
-            println!("VALID");
-        } else {
-            println!("INVALID");
-        }
-        println!("\n");
-    }
+        .filter(|passport| is_valid(passport))
+        .count();
+    
+    println!("{} passports are valid.", valid_passports);
 }
 
 fn read_passport<'a, T>(batch: &mut T) -> Option<HashMap<&'a str, &'a str>>
