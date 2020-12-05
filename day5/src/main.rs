@@ -1,13 +1,30 @@
 use num_integer::Integer;
+use std::collections::HashSet;
 
 fn main() {
-    let max_id = include_str!("puzzle_input.txt")
+    let occupied_seats: HashSet<usize> = include_str!("puzzle_input.txt")
         .lines()
         .map(seat_id)
-        .max()
-        .unwrap();
+        .collect();
+
+    println!(
+        "The highest seat ID is {}.",
+        occupied_seats.iter().max().unwrap()
+    );
     
-    println!("The highest seat ID is {}.", max_id);
+    for row in 0..=127 {
+        let row_id = 8 * row;
+        for column in 0..=7 {
+            let id = row_id + column;
+            if (!occupied_seats.contains(&id))
+                && occupied_seats.contains(&(id + 1))
+                && occupied_seats.contains(&(id - 1))
+            {
+                println!("My seat ID is {}", id);
+                break;
+            }
+        }
+    }
 }
 
 fn partition_lower(range: (usize, usize)) -> (usize, usize) {
@@ -43,7 +60,6 @@ fn column(seat: &[char]) -> usize {
 fn seat_id(seat: &str) -> usize {
     let chars: Vec<char> = seat.chars().collect();
     8 * row(&chars[0..=6]) + column(&chars[7..])
-
 }
 
 #[cfg(test)]
