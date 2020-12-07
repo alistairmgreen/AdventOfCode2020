@@ -13,14 +13,26 @@ fn main() {
     let rules: Vec<Rule> = include_str!("puzzle_input.txt")
         .lines()
         .map(parse_bag)
-        .map(| (colour, contents) | Rule { colour, contents })
+        .map(|(colour, contents)| Rule { colour, contents })
         .collect();
 
     let can_contain_gold = colours_containing("shiny gold", &rules);
-    println!("{} bag colours can contain shiny gold:", can_contain_gold.len());
+    println!(
+        "{} bag colours can contain shiny gold:",
+        can_contain_gold.len()
+    );
     for colour in can_contain_gold.iter() {
         println!("{}", colour);
     }
+
+    let rules: HashMap<String, Rule> = rules
+        .into_iter()
+        .map(|rule| (rule.colour.clone(), rule))
+        .collect();
+    
+    let gold_must_contain = must_contain("shiny gold", &rules);
+
+    println!("A shiny gold bag must contain {} other bags.", gold_must_contain);
 }
 
 fn parse_bag(bag: &str) -> (String, HashMap<String, usize>) {
@@ -69,13 +81,24 @@ fn colours_containing(colour: &str, rules: &[Rule]) -> HashSet<String> {
     colours
 }
 
+fn must_contain(colour: &str, rules: &HashMap<String, Rule>) -> usize {
+    let mut total = 0;
+
+    for (content_colour, count) in rules[colour].contents.iter() {
+        total += count * (1 + must_contain(content_colour, rules));
+    }
+
+    total
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
     fn test_parse_bag() {
-        let (colour, contents) = parse_bag("light red bags contain 1 bright white bag, 2 muted yellow bags.");
+        let (colour, contents) =
+            parse_bag("light red bags contain 1 bright white bag, 2 muted yellow bags.");
         assert_eq!(colour, "light red");
         assert_eq!(contents.len(), 2);
         assert_eq!(contents["bright white"], 1);
