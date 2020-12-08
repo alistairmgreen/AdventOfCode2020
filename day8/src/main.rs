@@ -8,14 +8,38 @@ fn main() -> Result<(), Box<dyn Error>>{
         .map(|line| line.parse())
         .collect::<Result<Vec<Instruction>, Box<dyn Error>>>()?;
     
-    let accumulator = run(&program);
+    let accumulator = run(&program).unwrap_err();
 
-    println!("Accumulator = {}", accumulator);
+    println!("Part 1: Accumulator = {}", accumulator);
+
+    for index in 0..program.len() {
+        if let Some(mutated) = mutate(&program, index) {
+            if let Ok(acc) = run(&mutated) {
+                println!("Change at line {}. Runs to completion with accumulator = {}.", index, acc);
+            }
+        }
+    }
 
     Ok(())
 }
 
-fn run(instructions: &[Instruction]) -> isize {
+fn mutate(program: &[Instruction], index: usize) -> Option<Vec<Instruction>> {
+    match program[index] {
+        Instruction::Accumulator(_) => None,
+        Instruction::Jump(n) => {
+            let mut mutated = program.to_owned();
+            mutated[index] = Instruction::Nop(n);
+            Some(mutated)
+        }
+        Instruction::Nop(n) => {
+            let mut mutated = program.to_owned();
+            mutated[index] = Instruction::Jump(n);
+            Some(mutated)
+        }
+    }
+}
+
+fn run(instructions: &[Instruction]) -> Result<isize, isize> {
     let mut accumulator = 0;
     let mut pointer = 0;
     let mut visited = HashSet::new();
@@ -29,17 +53,17 @@ fn run(instructions: &[Instruction]) -> isize {
             Instruction::Jump(j) => {
                 pointer = (pointer as isize + j) as usize;
             }
-            Instruction::Nop => {
+            Instruction::Nop(_) => {
                 pointer += 1;
             }
         }
 
         if !visited.insert(pointer) {
-            break;
+            return Err(accumulator);
         }
     }
     
-    accumulator
+    Ok(accumulator)
 }
 
 #[cfg(test)]
@@ -62,6 +86,6 @@ mod tests {
             .unwrap();
 
         let acc = run(&instructions);
-        assert_eq!(acc, 5);
+        assert_eq!(acc, Err(5));
     }
 }

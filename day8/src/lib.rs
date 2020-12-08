@@ -18,7 +18,7 @@ impl Error for InvalidInstructionError {}
 
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Instruction {
-    Nop,
+    Nop(isize),
     Accumulator(isize),
     Jump(isize),
 }
@@ -29,7 +29,7 @@ impl FromStr for Instruction {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (operation, argument) = scan_fmt!(s, "{} {d}", String, isize)?;
         match operation.as_str() {
-            "nop" => Ok(Instruction::Nop),
+            "nop" => Ok(Instruction::Nop(argument)),
             "acc" => Ok(Instruction::Accumulator(argument)),
             "jmp" => Ok(Instruction::Jump(argument)),
             unknown => Err(Box::new(InvalidInstructionError { instruction: unknown.to_string() }))
@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn parse_nop() {
         let instruction: Instruction = "nop +0".parse().unwrap();
-        assert_eq!(instruction, Instruction::Nop);
+        assert_eq!(instruction, Instruction::Nop(0));
     }
 
     #[test]
