@@ -16,6 +16,7 @@ fn main() -> Result<(), Box<dyn Error>>{
         if let Some(mutated) = mutate(&program, index) {
             if let Ok(acc) = run(&mutated) {
                 println!("Change at line {}. Runs to completion with accumulator = {}.", index, acc);
+                break;
             }
         }
     }
