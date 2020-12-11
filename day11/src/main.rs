@@ -2,43 +2,20 @@ use matrix::Matrix;
 use std::fmt;
 
 fn main() {
-    let mut generation = 0;
-    let mut previous_generation = read_grid(include_str!("puzzle_input.txt"));
+    let grid = read_grid(include_str!("puzzle_input.txt"));
+    let (generations, occupied) = part1(&grid);
 
-    loop {
-        generation += 1;
-        let next_generation = previous_generation.map(|row, column, value| match value {
-            Seat::Floor => Seat::Floor,
-            Seat::Occupied => {
-                if neighbours(row, column, &previous_generation) >= 4 {
-                    Seat::Vacant
-                } else {
-                    Seat::Occupied
-                }
-            }
-            Seat::Vacant => {
-                if neighbours(row, column, &previous_generation) == 0 {
-                    Seat::Occupied
-                } else {
-                    Seat::Vacant
-                }
-            }
-        });
+    println!(
+        "Part 1: Pattern stabilises at generation {}. {} seats are occupied.",
+        generations, occupied
+    );
 
-        if next_generation == previous_generation {
-            println!("Arrangement stabilised at generation {}", generation);
-            break;
-        }
+    let (generations, occupied) = part2(&grid);
 
-        previous_generation = next_generation;
-    }
-
-    let occupied_count = previous_generation
-        .iter()
-        .filter(|&&seat| seat == Seat::Occupied)
-        .count();
-    println!("{} seats are occupied:", occupied_count);
-    println!("{}", previous_generation);
+    println!(
+        "Part 2: Pattern stabilises at generation {}. {} seats are occupied.",
+        generations, occupied
+    );
 }
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -80,6 +57,72 @@ fn read_grid(grid: &str) -> Matrix<Seat> {
     Matrix::from_vec(seats, width)
 }
 
+fn part1(grid: &Matrix<Seat>) -> (usize, usize) {
+    simulate(grid, |row, column, value, previous| match value {
+        Seat::Floor => Seat::Floor,
+        Seat::Occupied => {
+            if neighbours(row, column, &previous) >= 4 {
+                Seat::Vacant
+            } else {
+                Seat::Occupied
+            }
+        }
+        Seat::Vacant => {
+            if neighbours(row, column, &previous) == 0 {
+                Seat::Occupied
+            } else {
+                Seat::Vacant
+            }
+        }
+    })
+}
+
+fn part2(grid: &Matrix<Seat>) -> (usize, usize) {
+    simulate(grid, |row, column, value, previous| match value {
+        Seat::Floor => Seat::Floor,
+        Seat::Occupied => {
+            if in_sight(row, column, &previous) >= 5 {
+                Seat::Vacant
+            } else {
+                Seat::Occupied
+            }
+        }
+        Seat::Vacant => {
+            if in_sight(row, column, &previous) == 0 {
+                Seat::Occupied
+            } else {
+                Seat::Vacant
+            }
+        }
+    })
+}
+
+fn simulate(
+    grid: &Matrix<Seat>,
+    rule: impl Fn(usize, usize, &Seat, &Matrix<Seat>) -> Seat,
+) -> (usize, usize) {
+    let mut previous_generation = grid.clone();
+    let mut generation = 0;
+    loop {
+        generation += 1;
+        let next_generation = previous_generation
+            .map(|row, column, value| rule(row, column, value, &previous_generation));
+
+        if next_generation == previous_generation {
+            break;
+        }
+
+        previous_generation = next_generation;
+    }
+
+    let occupied_count = previous_generation
+        .iter()
+        .filter(|&&seat| seat == Seat::Occupied)
+        .count();
+
+    (generation, occupied_count)
+}
+
 fn neighbours(row: usize, column: usize, grid: &Matrix<Seat>) -> usize {
     let min_row = if row > 0 { row - 1 } else { 0 };
     let max_row = if row < grid.height() - 1 {
@@ -111,6 +154,66 @@ fn neighbours(row: usize, column: usize, grid: &Matrix<Seat>) -> usize {
     occupied
 }
 
+fn in_sight(row: usize, column: usize, grid: &Matrix<Seat>) -> usize {
+    let mut visible = 0;
+
+    if look(&grid, row, column, | y, x | (y, x-1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y, x+1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y-1, x)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y+1, x)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y-1, x-1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y-1, x+1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y+1, x-1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    if look(&grid, row, column, | y, x | (y+1, x+1)) == Seat::Occupied {
+        visible += 1;
+    }
+
+    visible
+}
+
+fn look(grid: &Matrix<Seat>, row: usize, column: usize, step: impl Fn(isize, isize) -> (isize, isize)) -> Seat {
+    let (mut y, mut x) = step(row as isize, column as isize);
+
+    while x >= 0 && (x as usize) < grid.width() && y >= 0 && (y as usize) < grid.height() {
+        match grid[y as usize][x as usize] {
+            Seat::Floor => {
+                let next = step(y, x);
+                y = next.0;
+                x = next.1;
+            }
+            Seat::Occupied => {
+                return Seat::Occupied;
+            }
+            Seat::Vacant => {
+                return Seat::Vacant;
+            }
+        }
+    }
+
+    Seat::Floor
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,7 +221,7 @@ mod tests {
     #[test]
     fn test_neighbours1() {
         let grid = read_grid(
-"#.##.##.##
+            "#.##.##.##
 #######.##
 #.#.#..#..
 ####.##.##
@@ -134,5 +237,39 @@ mod tests {
 
         assert_eq!(neighbours(0, 0, &grid), 2);
         assert_eq!(neighbours(9, 9, &grid), 2);
+    }
+
+    #[test]
+    fn test_part1() {
+        let grid = read_grid("L.LL.LL.LL
+        LLLLLLL.LL
+        L.L.L..L..
+        LLLL.LL.LL
+        L.LL.LL.LL
+        L.LLLLL.LL
+        ..L.L.....
+        LLLLLLLLLL
+        L.LLLLLL.L
+        L.LLLLL.LL");
+
+        let (_, occupied) = part1(&grid);
+        assert_eq!(occupied, 37);
+    }
+
+    #[test]
+    fn test_part2() {
+        let grid = read_grid("L.LL.LL.LL
+        LLLLLLL.LL
+        L.L.L..L..
+        LLLL.LL.LL
+        L.LL.LL.LL
+        L.LLLLL.LL
+        ..L.L.....
+        LLLLLLLLLL
+        L.LLLLLL.L
+        L.LLLLL.LL");
+
+        let (_, occupied) = part2(&grid);
+        assert_eq!(occupied, 26);
     }
 }
