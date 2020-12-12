@@ -8,12 +8,16 @@ fn main() -> Result<(), InvalidInstructionError> {
         .lines()
         .map(|line| line.trim().parse())
         .collect::<Result<Vec<Instruction>, InvalidInstructionError>>()?;
-    
-    let (x, y) = sail(&voyage)?;
+    let (x, y) = sail_part1(&voyage)?;
     let manhattan = x.abs() + y.abs();
 
-    println!("Manhattan distance = {}", manhattan);
-    
+    println!("Part 1 Manhattan distance = {}", manhattan);
+
+    let (x, y) = sail_part2(&voyage)?;
+    let manhattan = x.abs() + y.abs();
+
+    println!("Part 2 Manhattan distance = {}", manhattan);
+
     Ok(())
 }
 
@@ -76,7 +80,7 @@ impl FromStr for Instruction {
     }
 }
 
-fn sail(instructions: &[Instruction]) -> Result<(i32, i32), InvalidInstructionError> {
+fn sail_part1(instructions: &[Instruction]) -> Result<(i32, i32), InvalidInstructionError> {
     let mut x = 0;
     let mut y = 0;
     let mut heading = 90;
@@ -95,12 +99,8 @@ fn sail(instructions: &[Instruction]) -> Result<(i32, i32), InvalidInstructionEr
             Instruction::West(n) => {
                 x -= n;
             }
-            Instruction::Left(n) => {
-                heading = (heading - n).rem_euclid(360)
-            }
-            Instruction::Right(n) => {
-                heading = (heading + n).rem_euclid(360)
-            }
+            Instruction::Left(n) => heading = (heading - n).rem_euclid(360),
+            Instruction::Right(n) => heading = (heading + n).rem_euclid(360),
             Instruction::Forward(n) => match heading {
                 0 => y += n,
                 90 => x += n,
@@ -116,6 +116,70 @@ fn sail(instructions: &[Instruction]) -> Result<(i32, i32), InvalidInstructionEr
     }
 
     Ok((x, y))
+}
+
+fn sail_part2(instructions: &[Instruction]) -> Result<(i32, i32), InvalidInstructionError> {
+    let mut position = (0, 0);
+    let mut waypoint = (10, 1);
+
+    for instruction in instructions {
+        match instruction {
+            Instruction::North(n) => {
+                waypoint.1 += n;
+            }
+            Instruction::South(n) => {
+                waypoint.1 -= n;
+            }
+            Instruction::East(n) => {
+                waypoint.0 += n;
+            }
+            Instruction::West(n) => {
+                waypoint.0 -= n;
+            }
+            Instruction::Left(n) => {
+                waypoint = rotate(waypoint, -n)?;
+
+            }
+            Instruction::Right(n) => {
+                waypoint = rotate(waypoint, *n)?;
+            }
+            Instruction::Forward(n) => {
+                position.0 += n * waypoint.0;
+                position.1 += n * waypoint.1;
+            }
+        }
+    }
+
+    Ok(position)
+}
+
+fn rotate(position: (i32, i32), angle: i32) -> Result<(i32, i32), InvalidInstructionError> {
+        let (x, y) = position;
+        let c = integer_cos(angle)?;
+        let s = integer_sin(angle)?;
+        Ok((x * c + y * s, y * c - x * s))
+}
+
+fn integer_sin(theta: i32) -> Result<i32, InvalidInstructionError> {
+    if theta > 0 {
+        match theta {
+            0 | 180 => Ok(0),
+            90 => Ok(1),
+            270 => Ok(-1),
+            x => Err(InvalidInstructionError { message: format!("Unexpected angle {}", x) }), 
+        }
+    } else {
+        integer_sin(-theta).map(|x| -x)
+    }
+}
+
+fn integer_cos(theta: i32) -> Result<i32, InvalidInstructionError> {
+    match theta.abs() {
+        90 | 270 => Ok(0),
+        0 => Ok(1),
+        180 => Ok(-1),
+        x => Err(InvalidInstructionError { message: format!("Unexpected angle {}", x )})
+    }
 }
 
 #[cfg(test)]
@@ -144,6 +208,19 @@ mod tests {
             Instruction::Forward(11),
         ];
 
-        assert_eq!(sail(&instructions), Ok((17, -8)))
+        assert_eq!(sail_part1(&instructions), Ok((17, -8)))
+    }
+
+    #[test]
+    fn test_part2() {
+        let instructions = vec![
+            Instruction::Forward(10),
+            Instruction::North(3),
+            Instruction::Forward(7),
+            Instruction::Right(90),
+            Instruction::Forward(11),
+        ];
+
+        assert_eq!(sail_part2(&instructions), Ok((214, -72)))
     }
 }
