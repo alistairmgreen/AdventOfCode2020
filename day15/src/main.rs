@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 fn main() {
     let input = [2,1,10,11,0,6];
 
@@ -15,15 +15,19 @@ fn main() {
 struct MemoryGame {
     turn: usize,
     last_number: usize,
-    numbers: HashMap<usize, Vec<usize>>,
+    numbers: HashMap<usize, VecDeque<usize>>,
 }
 
 impl MemoryGame {
     pub fn new(start: &[usize]) -> MemoryGame {
-        let numbers: HashMap<usize, Vec<usize>> = start
+        let numbers: HashMap<usize, VecDeque<usize>> = start
             .iter()
             .enumerate()
-            .map(|(index, &n)| (n, vec![index + 1]))
+            .map(|(index, &n)| {
+                let mut v = VecDeque::with_capacity(2);
+                v.push_back(index + 1);
+                (n, v)
+            })
             .collect();
         let turn = numbers.len();
         let last_number = *start.last().unwrap();
@@ -50,9 +54,13 @@ impl Iterator for MemoryGame {
             occurrences[len - 1] - occurrences[len - 2]
         };
 
-        let occurrences = self.numbers.entry(next_number).or_insert_with(Vec::new);
-        occurrences.push(self.turn);
-        
+        let occurrences = self.numbers.entry(next_number).or_insert_with(||VecDeque::with_capacity(2));
+
+        if occurrences.len() > 1 {
+            occurrences.pop_front();
+        }
+        occurrences.push_back(self.turn);
+                
         self.last_number = next_number;
 
         Some(next_number)
