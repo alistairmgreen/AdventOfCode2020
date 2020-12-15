@@ -5,6 +5,10 @@ fn main() {
     let mut game = MemoryGame::new(&input);
     let part1 = game.nth(2020 - input.len() - 1).unwrap();
     println!("The 2020th number is {}.", part1);
+
+    let mut game = MemoryGame::new(&input);
+    let part2 = game.nth(30_000_000 - input.len() - 1).unwrap();
+    println!("The 30_000_000th number is {}.", part2);
 }
 
 #[derive(Debug)]
