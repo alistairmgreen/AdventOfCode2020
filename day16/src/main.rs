@@ -14,7 +14,6 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     let tickets = valid_tickets(tickets, &rules);
     let fields = field_positions(&tickets, &rules);
-    println!("{:#?}", fields);
 
     let my_ticket = vec![
         139, 67, 71, 59, 149, 89, 101, 83, 107, 103, 79, 157, 151, 113, 61, 109, 73, 97, 137, 53,
@@ -133,7 +132,7 @@ fn field_positions(tickets: &[Vec<u32>], rules: &[Rule]) -> HashMap<String, usiz
     }
 
     while possibilities.values().any(|set| set.len() > 1) {
-        let unique: Vec<usize> = possibilities
+        let unique: HashSet<usize> = possibilities
             .values()
             .filter(|set| set.len() == 1)
             .map(|set| set.iter().cloned().next().unwrap())
@@ -146,10 +145,6 @@ fn field_positions(tickets: &[Vec<u32>], rules: &[Rule]) -> HashMap<String, usiz
                 possibility.retain(|n| !unique.contains(n));
             }
         }
-    }
-
-    for possibility in possibilities.values() {
-        assert_eq!(possibility.len(), 1);
     }
 
     possibilities
